@@ -1,1 +1,0 @@
-# Quantative_Risk
