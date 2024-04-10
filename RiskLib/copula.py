@@ -39,7 +39,7 @@ def simulateCopula(portfolio, returns):
     
     # Use the PCA to simulate the multivariate normal.
     simulations = pca_simulation(spearman_corr_matrix, N=nSim)
-    simulations = pd.DataFrame(simulations.T, columns=[stock for stock in returns.columns])
+    simulations = pd.DataFrame(simulations, columns=[stock for stock in returns.columns])
     
     # Transform the simulations into uniform variables using standard normal CDF.
     uni = norm.cdf(simulations)
@@ -66,16 +66,14 @@ def simulateCopula(portfolio, returns):
         simulatedValue[stock] = currentValue * (1 + simulatedReturns[stock])
         pnl[stock] = simulatedValue[stock] - currentValue
         
-    risk = pd.DataFrame(columns = ["Stock", "VaR95", "ES95", "VaR95_Pct", "ES95_Pct"])
+    risk = pd.DataFrame(columns = ["Stock", "VaR95", "ES95"])
     w = pd.DataFrame()
 
     for stock in pnl.columns:
         i = risk.shape[0]
         risk.loc[i, "Stock"] = stock
         risk.loc[i, "VaR95"] = -np.percentile(pnl[stock], 5)
-        risk.loc[i, "VaR95_Pct"] = risk.loc[i, "VaR95"] / portfolio.loc[portfolio['Stock'] == stock, 'CurrentValue'].iloc[0]
         risk.loc[i, "ES95"] = -pnl[stock][pnl[stock] <= -risk.loc[i, "VaR95"]].mean()
-        risk.loc[i, "ES95_Pct"] = risk.loc[i, "ES95"] / portfolio.loc[portfolio['Stock'] == stock, 'CurrentValue'].iloc[0]
         
         # Determine the weights for the two stock
         w.at['Weight', stock] = portfolio.loc[portfolio['Stock'] == stock, 'CurrentValue'].iloc[0] / portfolio['CurrentValue'].sum()
@@ -88,30 +86,6 @@ def simulateCopula(portfolio, returns):
     i = risk.shape[0]
     risk.loc[i, "Stock"] = 'Total'
     risk.loc[i, "VaR95"] = -np.percentile(pnl['Total'], 5)
-    risk.loc[i, "VaR95_Pct"] = risk.loc[i, "VaR95"] / portfolio['CurrentValue'].sum()
     risk.loc[i, "ES95"] = -pnl['Total'][pnl['Total'] <= -risk.loc[i, "VaR95"]].mean()
-    risk.loc[i, "ES95_Pct"] = risk.loc[i, "ES95"] / portfolio['CurrentValue'].sum()
-
-
-        
-#     w = w.loc['Weight']
-#     weightedPnl = w * pnl
-#     weightedPnl['Total'] = 0
-    
-#     # Calculate the total PnL for one day.
-#     for stock in returns.columns:
-#         weightedPnl['Total'] += weightedPnl[stock]
-
-#     # Calculate the portfolio's mean and standard deviation
-#     portfolioMean = weightedPnl['Total'].mean()
-#     portfolioStd = weightedPnl['Total'].std()
-    
-#     # Determine the risk measure for the whole portfolio
-#     i = risk.shape[0]
-#     risk.loc[i, "Stock"] = 'Total'
-#     risk.loc[i, "VaR95"] = -norm.ppf(0.05, portfolioMean, portfolioStd)
-#     risk.loc[i, "VaR95_Pct"] = -norm.ppf(0.05, portfolioMean, portfolioStd)risk.loc[i, "VaR95"] / portfolio['CurrentValue'].sum()
-#     risk.loc[i, "ES95"] = -weightedPnl['Total'][weightedPnl['Total'] <= -risk.loc[i, "VaR95"]].mean()
-#     risk.loc[i, "ES95_Pct"] = risk.loc[i, "ES95"] / portfolio['CurrentValue'].sum()
         
     return risk
